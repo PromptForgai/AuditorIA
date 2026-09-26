@@ -475,7 +475,7 @@ function openCrypto(plan){
   document.getElementById("cryptoModal").classList.add("open");
 }
 function closeCrypto(){document.getElementById("cryptoModal").classList.remove("open")}
-const WORKER_URL = "https://auditoria.promptforgeai.workers.dev";
+const WORKER_URL = "https://auditoria-pay.promptforgeai.workers.dev";
 async function goToNowPayments(){
   try { localStorage.setItem("auditoria_pending_plan", selectedPlan); } catch(e){}
   try {
