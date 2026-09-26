@@ -20,18 +20,17 @@ p{color:#94a3b8;line-height:1.6;margin:0 0 16px}
 </head>
 <body>
 <div class="card">
-  <div class="icon" id="icon">✓</div>
+  <div class="icon" id="icon">…</div>
   <h1 id="title">Activating…</h1>
   <div class="plan" id="planName"></div>
-  <p class="status" id="status">Checking payment status…</p>
-  <p id="msg">Please wait a few seconds while we confirm your payment with NOWPayments.</p>
+  <p class="status" id="status">Checking payment…</p>
+  <p id="msg">Please wait while we confirm your payment.</p>
   <a class="btn" href="index.html" id="dashBtn" style="display:none">Open dashboard</a>
-  <div class="note">Subscription lasts 30 days from activation. Free plan: 2 contract analyses.</div>
+  <div class="note">Subscription is valid for 30 days. Free plan includes 2 contract analyses.</div>
 </div>
 <script>
 (function(){
-  // CHANGE to your Worker URL after deploy
-  var WORKER_URL = "https://YOUR_WORKER.YOUR_SUBDOMAIN.workers.dev";
+  var WORKER_URL = "https://auditoria.promptforgeai.workers.dev";
   var MONTH_MS = 30 * 24 * 60 * 60 * 1000;
   var params = new URLSearchParams(location.search);
   var orderId = params.get("order_id") || localStorage.getItem("auditoria_pending_order");
@@ -48,28 +47,20 @@ p{color:#94a3b8;line-height:1.6;margin:0 0 16px}
     document.getElementById("title").textContent = "Subscription activated";
     document.getElementById("planName").textContent = (p === "growth" ? "Growth" : "Starter") + " — 30 days";
     document.getElementById("status").textContent = "";
-    document.getElementById("msg").textContent = "Your monthly access is active. Open the dashboard to analyze contracts without limits.";
+    document.getElementById("msg").textContent = "Your monthly access is active. Open the dashboard to continue.";
     document.getElementById("dashBtn").style.display = "inline-block";
   }
 
   async function check(){
-    if (!orderId || WORKER_URL.indexOf("YOUR_WORKER") !== -1) {
-      // No worker yet: activate on trust when user lands from success_url
-      activate(plan);
-      return;
-    }
+    if (!orderId) { activate(plan); return; }
     try {
-      var res = await fetch(WORKER_URL.replace(/\/$/, "") + "/status?order_id=" + encodeURIComponent(orderId));
+      var res = await fetch(WORKER_URL + "/status?order_id=" + encodeURIComponent(orderId));
       var data = await res.json();
-      if (data.paid || data.status === "paid") {
-        activate(data.plan || plan);
-        return;
-      }
-      document.getElementById("status").textContent = "Payment status: " + (data.status || "pending");
-      document.getElementById("msg").textContent = "Waiting for blockchain confirmation… This page will update automatically.";
+      if (data.paid || data.status === "paid") { activate(data.plan || plan); return; }
+      document.getElementById("status").textContent = "Status: " + (data.status || "pending");
+      document.getElementById("msg").textContent = "Waiting for blockchain confirmation…";
       setTimeout(check, 5000);
     } catch(e) {
-      // Network error — still allow activation if redirected from success_url
       activate(plan);
     }
   }

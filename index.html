@@ -240,7 +240,8 @@ footer{padding:40px;text-align:center;color:var(--muted);font-size:.9rem;border-
           <button class="btn btn-primary" style="width:100%" onclick="openCrypto('growth')" data-i18n="choose_growth">Choose Growth</button>
         </div>
       </div>
-      <p style="text-align:center;margin-top:28px;color:var(--muted);font-size:.9rem" data-i18n="crypto_accepted">Accepted: <strong style="color:var(--text)">USDT (TRC20)</strong> · <strong style="color:var(--text)">BTC</strong> · <strong style="color:var(--text)">ETH</strong></p>
+      <p style="text-align:center;margin-top:28px;color:var(--muted);font-size:.9rem" data-i18n="crypto_accepted">Accepted: <strong style="color:var(--text)">USDT (TRC20)</strong> · <strong style="color:var(--text)">BTC</strong> · <strong style="color:var(--text)">ETH</strong><br><br>
+      <a href="activated.html" style="color:#10b981;font-weight:600">I already paid — Activate my subscription →</a></p>
     </div>
   </section>
 
@@ -474,41 +475,28 @@ function openCrypto(plan){
   document.getElementById("cryptoModal").classList.add("open");
 }
 function closeCrypto(){document.getElementById("cryptoModal").classList.remove("open")}
-// Cloudflare Worker URL — CHANGE THIS after you deploy the worker
-const WORKER_URL = "https://YOUR_WORKER.YOUR_SUBDOMAIN.workers.dev";
-
+const WORKER_URL = "https://auditoria.promptforgeai.workers.dev";
 async function goToNowPayments(){
   try { localStorage.setItem("auditoria_pending_plan", selectedPlan); } catch(e){}
-
-  // Prefer Worker (invoice + success_url + IPN). Fallback to static Payment Links.
-  if (WORKER_URL && !WORKER_URL.includes("YOUR_WORKER")) {
-    try {
-      const siteBase = window.location.origin + window.location.pathname.replace(/index\.html$/, "");
-      const successUrl = siteBase + (siteBase.endsWith("/") ? "" : "/") + "activated.html";
-      const res = await fetch(WORKER_URL.replace(/\/$/, "") + "/create-invoice", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          plan: selectedPlan,
-          success_url: successUrl,
-          site_base: siteBase
-        })
-      });
-      const data = await res.json();
-      if (data.invoice_url) {
-        try { localStorage.setItem("auditoria_pending_order", data.order_id); } catch(e){}
-        window.location.href = data.invoice_url;
-        return;
-      }
-      showToast(data.error || "Payment error");
-    } catch (err) {
-      showToast("Worker unavailable — using payment link");
+  try {
+    const base = location.href.replace(/index\.html.*/,"").replace(/\/#.*/,"");
+    const successUrl = base + (base.endsWith("/") ? "" : "/") + "activated.html";
+    const res = await fetch(WORKER_URL + "/create-invoice", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ plan: selectedPlan, success_url: successUrl })
+    });
+    const data = await res.json();
+    if (data.invoice_url) {
+      try { localStorage.setItem("auditoria_pending_order", data.order_id); } catch(e){}
+      window.location.href = data.invoice_url;
+      return;
     }
+    showToast(data.error || "Payment setup error — using backup link");
+  } catch (err) {
+    showToast("Worker error — using backup payment link");
   }
-
-  // Fallback: dashboard Payment Links (no auto success_url)
-  const url = NP_LINKS[selectedPlan];
-  window.location.href = url;
+  window.location.href = NP_LINKS[selectedPlan];
 }
 document.querySelectorAll(".nav-item").forEach(item=>{item.addEventListener("click",()=>{const page=item.dataset.page;document.querySelectorAll(".nav-item").forEach(n=>n.classList.remove("active"));item.classList.add("active");document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));document.getElementById("page-"+page).classList.add("active");document.getElementById("page-title").textContent=i18n[currentLang].titles[page];document.getElementById("sidebar").classList.remove("open")})});
 const baseAlerts=[{type:"critical",title:{en:"Billing discrepancy detected",fr:"Écart de facturation détecté"},desc:{en:"AWS invoice INV-28491 is 18% higher than the framework contract. Overcharge: €2,140.",fr:"Facture AWS n° INV-28491 supérieure de 18 % au contrat cadre. Montant en trop : € 2 140."},meta:{en:"2 hours ago · Cloud Infrastructure",fr:"Il y a 2 heures · Cloud Infrastructure"}},{type:"warning",title:{en:"Contract approaching expiry",fr:"Contrat arrivant à échéance"},desc:{en:"IT Maintenance (TechSupport SA) expires in 5 days. Renegotiation recommended.",fr:"Maintenance Informatique (TechSupport SA) expire dans 5 jours. Renégociation recommandée."},meta:{en:"5 hours ago · Expiry 30 Sep 2026",fr:"Il y a 5 heures · Échéance 30 sept. 2026"}},{type:"critical",title:{en:"Suspicious double payment",fr:"Double paiement suspect"},desc:{en:"Two identical transfers of €4,800 to the same vendor within 48h.",fr:"Deux virements identiques de € 4 800 vers le même fournisseur en 48h."},meta:{en:"Yesterday · Bank flows",fr:"Hier · Flux bancaires"}},{type:"info",title:{en:"Savings opportunity",fr:"Opportunité d'économie"},desc:{en:"AI identified a preferential Salesforce rate (-12%) valid until 15 October.",fr:"L'IA a identifié un tarif Salesforce préférentiel (-12 %) valable jusqu'au 15 octobre."},meta:{en:"1 day ago",fr:"Il y a 1 jour"}},{type:"warning",title:{en:"Missing document",fr:"Document manquant"},desc:{en:"Amendment #3 of Office Lease not uploaded. Compliance incomplete.",fr:"Avenant n°3 du contrat Location Bureaux non téléversé. Conformité incomplète."},meta:{en:"2 days ago",fr:"Il y a 2 jours"}}];
